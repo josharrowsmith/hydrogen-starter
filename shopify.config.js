@@ -1,8 +1,5 @@
-const config = {
-  locale: 'en-us',
+export default {
   storeDomain: process.env.SITE_URL,
   storefrontToken: process.env.TOKEN,
-  graphqlApiVersion: 'unstable',
+  storefrontApiVersion: '2022-04',
 };
-
-export default config;
