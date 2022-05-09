@@ -4,6 +4,7 @@ import netlifyPlugin from '@netlify/hydrogen-platform/plugin';
 import shopifyConfig from './shopify.config';
 
 // https://vitejs.dev/config/
+
 export default defineConfig({
   plugins: [hydrogen(shopifyConfig), netlifyPlugin()],
   optimizeDeps: {include: ['@headlessui/react']},
