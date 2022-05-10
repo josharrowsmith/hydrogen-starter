@@ -10,7 +10,11 @@ import CartProvider from './components/CartProvider.client';
 function App({routes}) {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <ShopifyProvider shopifyConfig={shopifyConfig}>
+      <ShopifyProvider shopifyConfig={{
+          storeDomain: import.meta.env.VITE_SITE_URL,
+          storefrontToken: import.meta.env.VITE_TOKEN,
+          storefrontApiVersion: 'unstable'
+      }}>
         <CartProvider>
           <DefaultSeo />
           <Router>

@@ -1,6 +1,6 @@
 [build]
 publish = "dist/client"
-command = "yarn build"
+command = "yarn build cross-env SITE_URL=process.env.SITE_URL TOKEN=process.env.TOKEN"
 
 [dev]
 framework = "#static"
