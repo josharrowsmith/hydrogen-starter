@@ -8,24 +8,20 @@ import {
 import gql from 'graphql-tag';
 
 import Layout from '../components/Layout.server';
-import FeaturedCollection from '../components/FeaturedCollection';
 import ProductCard from '../components/ProductCard';
-import Welcome from '../components/Welcome.server';
+
+
 import {Suspense} from 'react';
 
-export default function Index({country = {isoCode: 'US'}}) {
+export default function Index({country = {isoCode: 'AU'}}) {
   return (
     <Layout hero={<GradientBackground />}>
       <Suspense fallback={null}>
         <SeoForHomepage />
       </Suspense>
       <div className="relative mb-12">
-        <Welcome />
         <Suspense fallback={<BoxFallback />}>
           <FeaturedProductsBox country={country} />
-        </Suspense>
-        <Suspense fallback={<BoxFallback />}>
-          <FeaturedCollectionBox country={country} />
         </Suspense>
       </div>
     </Layout>
@@ -67,11 +63,18 @@ function FeaturedProductsBox({country}) {
     preload: true,
   });
 
+  const {data2} = useShopQuery({
+    query: WISH_QUERY,
+    preload: true,
+  });
+  console.log(data2)
+  
   const collections = data ? flattenConnection(data.collections) : [];
   const featuredProductsCollection = collections[0];
   const featuredProducts = featuredProductsCollection
     ? flattenConnection(featuredProductsCollection.products)
     : null;
+
 
   return (
     <div className="bg-white p-12 shadow-xl rounded-xl mb-10">
@@ -94,6 +97,7 @@ function FeaturedProductsBox({country}) {
             {featuredProducts.map((product) => (
               <div key={product.id}>
                 <ProductCard product={product} />
+                <p>{JSON.stringify(data)}</p>
               </div>
             ))}
           </div>
@@ -111,21 +115,6 @@ function FeaturedProductsBox({country}) {
   );
 }
 
-function FeaturedCollectionBox({country}) {
-  const {data} = useShopQuery({
-    query: QUERY,
-    variables: {
-      country: country.isoCode,
-    },
-    preload: true,
-  });
-
-  const collections = data ? flattenConnection(data.collections) : [];
-  const featuredCollection =
-    collections && collections.length > 1 ? collections[1] : collections[0];
-
-  return <FeaturedCollection collection={featuredCollection} />;
-}
 
 function GradientBackground() {
   return (
@@ -236,6 +225,23 @@ const QUERY = gql`
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const WISH_QUERY = gql`
+  query wishlist {
+    products(first: 3) {
+      edges {
+        node {
+          metafields(first: 3){
+            nodes {
+              key
+              value
             }
           }
         }

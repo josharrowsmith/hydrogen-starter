@@ -9,7 +9,6 @@ import MoneyPrice from './MoneyPrice.client';
  */
 export default function ProductCard({product}) {
   const selectedVariant = product.variants.edges[0].node;
-
   if (selectedVariant == null) {
     return null;
   }
@@ -48,6 +47,10 @@ export default function ProductCard({product}) {
           <Suspense fallback={null}>
             <MoneyPrice money={selectedVariant.priceV2} />
           </Suspense>
+        </div>
+
+        <div className="flex ">
+          <p>heyman</p>
         </div>
       </Link>
     </div>
