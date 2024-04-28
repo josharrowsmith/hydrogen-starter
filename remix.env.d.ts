@@ -33,7 +33,6 @@ declare module '@netlify/remix-runtime' {
    */
   export interface AppLoadContext extends Context {
     env: Env;
-    cart: HydrogenCart;
     storefront: Storefront;
     session: HydrogenSession;
   }
