@@ -1,145 +1,201 @@
-import {defer, type LoaderFunctionArgs} from '@netlify/remix-runtime';
-import {Await, useLoaderData, Link, type MetaFunction} from '@remix-run/react';
-import {Suspense} from 'react';
-import {Image, Money} from '@shopify/hydrogen';
-import type {
-  FeaturedCollectionFragment,
-  RecommendedProductsQuery,
-} from 'storefrontapi.generated';
+import { defer, type LoaderFunctionArgs } from '@netlify/remix-runtime';
+import { useLoaderData, Link, type MetaFunction } from '@remix-run/react';
+import { json } from '@shopify/remix-oxygen';
+import { Image, Money, flattenConnection, AnalyticsPageType } from '@shopify/hydrogen';
+import ProductGrid from "../components/ProductGrid"
+import { SortFilter } from '../components/SortFilter';
 
 export const meta: MetaFunction = () => {
-  return [{title: 'Hydrogen | Home'}];
+  return [{ title: 'Hydrogen | Home' }];
 };
 
-export async function loader({context}: LoaderFunctionArgs) {
-  const {storefront} = context;
-  const {collections} = await storefront.query(FEATURED_COLLECTION_QUERY);
-  const featuredCollection = collections.nodes[0];
-  const recommendedProducts = storefront.query(RECOMMENDED_PRODUCTS_QUERY);
+export async function loader({ context, request }: LoaderFunctionArgs) {
+  const handle = "parts"
+  const searchParams = new URL(request.url).searchParams;
+  const cursor = searchParams.get('cursor');
+  const filters = [];
+  const appliedFilters = [];
+  const knownFilters = ['productVendor', 'productType',];
+  const available = 'available';
+  const variantOption = 'variantOption';
 
-  return defer({featuredCollection, recommendedProducts});
+
+  for (const [key, value] of searchParams.entries()) {
+    if (available === key) {
+      filters.push({ available: value === 'true' });
+      appliedFilters.push({
+        label: value === 'true' ? 'In stock' : 'Out of stock',
+        urlParam: {
+          key: available,
+          value,
+        },
+      });
+    } else if (knownFilters.includes(key)) {
+      filters.push({ [key]: value });
+      appliedFilters.push({ label: value, urlParam: { key, value } });
+    } else if (key.includes(variantOption)) {
+      const [name, val] = value.split(':');
+      filters.push({ variantOption: { name, value: val } });
+      appliedFilters.push({ label: val, urlParam: { key, value } });
+    } else if (key.includes("colour_group")) {
+      filters.push({ variantMetafield: { namespace: "custom", key: key, value: value } })
+      appliedFilters.push({ label: "colour", urlParam: { key, value } });
+    }
+  }
+
+  if (searchParams.has('minPrice') || searchParams.has('maxPrice')) {
+    const price = {};
+    if (searchParams.has('minPrice')) {
+      price.min = Number(searchParams.get('minPrice')) || 0;
+      appliedFilters.push({
+        label: `Min: $${price.min}`,
+        urlParam: { key: 'minPrice', value: searchParams.get('minPrice') },
+      });
+    }
+    if (searchParams.has('maxPrice')) {
+      price.max = Number(searchParams.get('maxPrice')) || 0;
+      appliedFilters.push({
+        label: `Max: $${price.max}`,
+        urlParam: { key: 'maxPrice', value: searchParams.get('maxPrice') },
+      });
+    }
+    filters.push({
+      price,
+    });
+  }
+
+  const { collection, collections } = await context.storefront.query(
+    COLLECTION_QUERY,
+    {
+      variables: {
+        handle: handle,
+        pageBy: 12,
+        cursor,
+        filters,
+        country: context.storefront.i18n.country,
+        language: context.storefront.i18n.language,
+      },
+    },
+  );
+
+  if (!collection) {
+    throw new Response(null, { status: 404 });
+  }
+
+  const collectionNodes = flattenConnection(collections);
+
+  return json({
+    collection,
+    appliedFilters,
+    collections: collectionNodes,
+    analytics: {
+      pageType: AnalyticsPageType.collection,
+      handle,
+      resourceId: collection.id,
+    },
+  });
 }
 
 export default function Homepage() {
-  const data = useLoaderData<typeof loader>();
+  const { collection, collections, appliedFilters } = useLoaderData();
+  const plpDrawerFilters = collection.products.filters.filter(plpFilter =>
+    plpFilter.id == 'filter.v.price' || plpFilter.id == 'filter.p.product_type' || plpFilter.id == 'filter.v.option.color' || plpFilter.id == 'filter.p.vendor' || plpFilter.id == 'filter.v.m.custom.colour_group'
+  );
+
   return (
-    <div className="home">
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
-    </div>
+    <>
+      <header className="grid w-full gap-8 py-8 justify-items-start">
+      </header>
+      <SortFilter
+        filters={plpDrawerFilters}
+        appliedFilters={appliedFilters}
+        collections={collections}
+      >
+        <ProductGrid
+          key={collection.id}
+          collection={collection}
+          url={`/collections/${collection.handle}`}
+          data-test="product-grid"
+        />
+      </SortFilter>
+    </>
   );
 }
 
-function FeaturedCollection({
-  collection,
-}: {
-  collection: FeaturedCollectionFragment;
-}) {
-  if (!collection) return null;
-  const image = collection?.image;
-  return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image data={image} sizes="100vw" />
-        </div>
-      )}
-      <h1>{collection.title}</h1>
-    </Link>
-  );
-}
-
-function RecommendedProducts({
-  products,
-}: {
-  products: Promise<RecommendedProductsQuery>;
-}) {
-  return (
-    <div className="recommended-products">
-      <h2>Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {({products}) => (
-            <div className="recommended-products-grid">
-              {products.nodes.map((product) => (
-                <Link
-                  key={product.id}
-                  className="recommended-product"
-                  to={`/products/${product.handle}`}
-                >
-                  <Image
-                    data={product.images.nodes[0]}
-                    aspectRatio="1/1"
-                    sizes="(min-width: 45em) 20vw, 50vw"
-                  />
-                  <h4>{product.title}</h4>
-                  <small>
-                    <Money data={product.priceRange.minVariantPrice} />
-                  </small>
-                </Link>
-              ))}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
-    </div>
-  );
-}
-
-const FEATURED_COLLECTION_QUERY = `#graphql
-  fragment FeaturedCollection on Collection {
-    id
-    title
-    image {
+const COLLECTION_QUERY = `#graphql
+  query CollectionDetails(
+    $handle: String!
+    $cursor: String
+    $filters: [ProductFilter!]
+    $pageBy: Int!
+  ) {
+    collection(handle: $handle) {
       id
-      url
-      altText
-      width
-      height
+      title
+      description
+      handle
+      products(
+        first: $pageBy
+        after: $cursor
+        filters: $filters
+      ) {
+        filters {
+          id
+          label
+          type
+          values {
+            id
+            label
+            count
+            input
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          title
+          publishedAt
+          handle
+          variants(first: 1) {
+            nodes {
+              id
+              image {
+                url
+                altText
+                width
+                height
+              }
+              price {
+                amount
+                currencyCode
+              }
+              compareAtPrice {
+                amount
+                currencyCode
+              }
+              selectedOptions {
+                name
+                value
+              }
+              product {
+                handle
+                title
+              }
+            }
+          }
+        }
+      }
     }
-    handle
-  }
-  query FeaturedCollection($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...FeaturedCollection
+    collections(first: 100) {
+      edges {
+        node {
+          title
+          handle
+        }
       }
     }
   }
-` as const;
-
-const RECOMMENDED_PRODUCTS_QUERY = `#graphql
-  fragment RecommendedProduct on Product {
-    id
-    title
-    handle
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-    images(first: 1) {
-      nodes {
-        id
-        url
-        altText
-        width
-        height
-      }
-    }
-  }
-  query RecommendedProducts ($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...RecommendedProduct
-      }
-    }
-  }
-` as const;
+`;
