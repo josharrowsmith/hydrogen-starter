@@ -65,7 +65,9 @@ export async function loader({ context }: LoaderFunctionArgs) {
 }
 
 export default function App() {
-
+  const data = useRootLoaderData();
+  const {name} = data.layout.shop;
+  
   return (
     <html lang="en">
       <head>
@@ -88,7 +90,8 @@ export default function App() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const rootData = useRootLoaderData();
+  const data = useRootLoaderData();
+  const {name} = data.layout.shop;
   let errorMessage = 'Unknown error';
   let errorStatus = 500;
 
@@ -108,7 +111,7 @@ export function ErrorBoundary() {
         <Links />
       </head>
       <body>
-        <Layout {...rootData}>
+        <Layout title={name} >
           <div className="route-error">
             <h1>Oops</h1>
             <h2>{errorStatus}</h2>
