@@ -96,7 +96,6 @@ export async function loader({context, request}: LoaderFunctionArgs) {
     collections: collection,
     analytics: {
       pageType: AnalyticsPageType.collection,
-      handle,
       resourceId: collection.id,
     },
   });
