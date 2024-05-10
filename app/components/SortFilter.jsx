@@ -74,7 +74,7 @@ export function FiltersDrawer({
 
       default:
         const to = getFilterLink(filter, option.input, params, location);
- 
+        
         return (
           <Link
             className="focus:underline hover:underline"
@@ -90,11 +90,11 @@ export function FiltersDrawer({
   return (
     <>
       <nav className="py-8">
-        {appliedFilters.length > 0 ? (
+        {/* {appliedFilters.length > 0 ? (
           <div className="pb-8">
             <AppliedFilters filters={appliedFilters} />
           </div>
-        ) : null}
+        ) : null} */}
 
         <h4 className="pb-4">
           Filter By

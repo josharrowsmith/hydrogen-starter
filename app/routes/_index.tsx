@@ -9,13 +9,14 @@ import {
 } from '@shopify/hydrogen';
 import ProductGrid from '../components/ProductGrid';
 import {SortFilter} from '../components/SortFilter';
+import {DrawerFilter} from '../components/DrawerFilter';
+import {Drawer, useDrawer} from '~/components/Drawer';
 
 export const meta: MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
 };
 
 export async function loader({context, request}: LoaderFunctionArgs) {
-
   const data = await context.storefront.query(METAOBJECT_COLLECTION);
   const id = JSON.parse(data.metaobjects.edges[0].node.field.value)[0];
   const searchParams = new URL(request.url).searchParams;
@@ -103,6 +104,13 @@ export async function loader({context, request}: LoaderFunctionArgs) {
 
 export default function Homepage() {
   const {collection, collections, appliedFilters} = useLoaderData();
+
+  const {
+    isOpen: isCartOpen,
+    openDrawer: openMenu,
+    closeDrawer: closeMenu,
+  } = useDrawer();
+
   const plpDrawerFilters = collection.products.filters.filter(
     (plpFilter) =>
       plpFilter.id == 'filter.v.price' ||
@@ -115,18 +123,31 @@ export default function Homepage() {
   return (
     <>
       <header className="grid w-full gap-8 py-8 justify-items-start"></header>
-      <SortFilter
-        filters={plpDrawerFilters}
-        appliedFilters={appliedFilters}
-        collections={collections}
+
+      <button
+        onClick={openMenu}
+        className="relative flex items-center justify-center w-8 h-8"
       >
-        <ProductGrid
-          key={collection.id}
-          collection={collection}
-          url={`/collections/${collection.handle}`}
-          data-test="product-grid"
-        />
-      </SortFilter>
+        click me
+      </button>
+
+      <Drawer open={isCartOpen} onClose={closeMenu} openFrom="left">
+        <div className="grid h-full bg-white">
+          <DrawerFilter
+            filters={plpDrawerFilters}
+            appliedFilters={appliedFilters}
+            collections={collections}
+            openMenu={openMenu}
+          />
+        </div>
+      </Drawer>
+
+      <ProductGrid
+        key={collection.id}
+        collection={collection}
+        url={`/collections/${collection.handle}`}
+        data-test="product-grid"
+      />
     </>
   );
 }
