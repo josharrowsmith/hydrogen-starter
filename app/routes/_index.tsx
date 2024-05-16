@@ -11,6 +11,8 @@ import ProductGrid from '../components/ProductGrid';
 import {SortFilter} from '../components/SortFilter';
 import {DrawerFilter} from '../components/DrawerFilter';
 import {Drawer, useDrawer} from '~/components/Drawer';
+import { IconFilters } from '../components/Icon';
+
 
 export const meta: MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -45,6 +47,7 @@ export async function loader({context, request}: LoaderFunctionArgs) {
       filters.push({variantOption: {name, value: val}});
       appliedFilters.push({label: val, urlParam: {key, value}});
     } else if (key.includes('colour_group')) {
+      console.log(key, value)
       filters.push({
         variantMetafield: {namespace: 'custom', key: key, value: value},
       });
@@ -105,6 +108,9 @@ export async function loader({context, request}: LoaderFunctionArgs) {
 export default function Homepage() {
   const {collection, collections, appliedFilters} = useLoaderData();
 
+  console.log(collection)
+
+  
   const {
     isOpen: isCartOpen,
     openDrawer: openMenu,
@@ -122,13 +128,11 @@ export default function Homepage() {
 
   return (
     <>
-      <header className="grid w-full gap-8 py-8 justify-items-start"></header>
-
       <button
         onClick={openMenu}
         className="relative flex items-center justify-center w-8 h-8"
       >
-        click me
+        <IconFilters/>
       </button>
 
       <Drawer open={isCartOpen} onClose={closeMenu} openFrom="left">
@@ -203,6 +207,9 @@ const COLLECTION_QUERY = `#graphql
           title
           publishedAt
           handle
+          metafield(namespace: "custom" key: "manual") {
+            value
+          }
           variants(first: 1) {
             nodes {
               id

@@ -13,13 +13,11 @@ import { Disclosure } from '@headlessui/react';
 export function DrawerFilter({
     filters,
     appliedFilters = [],
-    collections = [],
-    openMenu
+    collections = []
 }) {
     return (
 
-        <div class="px-2">
-
+        <div class="px-6 sm:px-8 md:px-12">
             <FiltersDrawer
                 collections={collections}
                 filters={filters}
@@ -70,11 +68,11 @@ export function FiltersDrawer({
     return (
         <>
             <nav className="py-8">
-                {/* {appliedFilters.length > 0 ? (
-          <div className="pb-8">
-            <AppliedFilters filters={appliedFilters} />
-          </div>
-        ) : null} */}
+                {appliedFilters.length > 0 ? (
+                    <div className="pb-8">
+                        <AppliedFilters filters={appliedFilters} />
+                    </div>
+                ) : null}
 
                 <h4 className="pb-4">
                     Filter By
@@ -110,6 +108,54 @@ export function FiltersDrawer({
             </nav>
         </>
     );
+}
+
+function AppliedFilters({ filters = [] }) {
+    const [params] = useSearchParams();
+    const location = useLocation();
+
+
+
+    return (
+        <>
+            <h4 className="pb-4">
+                Applied filters
+            </h4>
+            <div className="flex flex-wrap gap-2">
+                {filters.map((filter) => {
+                    return (
+                        <Link
+                            to={getAppliedFilterLink(filter, params, location)}
+                            className="flex px-2 border rounded-full gap"
+                            key={`${filter.label}-${filter.urlParam}`}
+                        >
+                            <span className="flex-grow">{filter.label}</span>
+                            <span>
+                                <IconXMark />
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </>
+    );
+}
+
+function getAppliedFilterLink(filter, params, location) {
+    const paramsClone = new URLSearchParams(params);
+    if (filter.urlParam.key === 'variantOption') {
+        const variantOptions = paramsClone.getAll('variantOption');
+        const filteredVariantOptions = variantOptions.filter(
+            (options) => !options.includes(filter.urlParam.value),
+        );
+        paramsClone.delete(filter.urlParam.key);
+        for (const filteredVariantOption of filteredVariantOptions) {
+            paramsClone.append(filter.urlParam.key, filteredVariantOption);
+        }
+    } else {
+        paramsClone.delete(filter.urlParam.key);
+    }
+    return `${location.pathname}?${paramsClone.toString()}`;
 }
 
 function getFilterLink(filter, rawInput, params, location) {
@@ -202,14 +248,10 @@ function filterInputToParams(type, rawInput, params) {
                 } else if (typeof value === 'boolean') {
                     params.set(key, value.toString());
                 } else {
+                    // deal with this later
                     const { name, value: val } = value;
-
-                    params.append('colour_group', `${val}`)
-                    // const allVariants = params.getAll(`variantOption`);
-                    // const newVariant = `${name}:${val}`;
-                    // if (!allVariants.includes(newVariant)) {
-                    //   params.append('variantOption', newVariant);
-                    // }
+                    console.log(params, key, value)
+                    // params.append('colour_group', `${val}`)
                 }
             });
             break;
